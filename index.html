@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trykk på sirkelen</title>
+<style>
+  body { margin: 0; font-family: system-ui, sans-serif; background: #1e1e2e; color: #fff; text-align: center; user-select: none; }
+  header { padding: 12px; font-size: 1.3rem; }
+  header span { margin: 0 14px; }
+  #area { position: relative; width: min(92vw, 700px); height: 60vh; margin: 0 auto; background: #2b2b40; border-radius: 12px; overflow: hidden; }
+  .circle { position: absolute; border-radius: 50%; background: #ff5c8a; cursor: pointer; box-shadow: 0 0 12px #ff5c8a; }
+  #msg { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,.6); }
+  button { font-size: 1.2rem; padding: 10px 24px; border: 0; border-radius: 8px; background: #4cc9f0; cursor: pointer; margin-top: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <span>Poeng: <b id="score">0</b></span>
+  <span>Rekord: <b id="best">0</b></span>
+  <span>Liv: <b id="lives">3</b></span>
+</header>
+<div id="area">
+  <div id="msg"><div id="msgText">Trykk på sirkelen før den forsvinner!</div><button id="start">Start</button></div>
+</div>
+<script>
+const area = document.getElementById('area');
+const msg = document.getElementById('msg');
+const msgText = document.getElementById('msgText');
+const scoreEl = document.getElementById('score');
+const bestEl = document.getElementById('best');
+const livesEl = document.getElementById('lives');
+
+let score, lives, best, timer, lifetime;
+best = parseInt(localStorage.getItem('sirkel-rekord') || '0', 10);
+bestEl.textContent = best;
+
+document.getElementById('start').onclick = start;
+
+function start() {
+  score = 0; lives = 3; lifetime = 1500;
+  scoreEl.textContent = score; livesEl.textContent = lives;
+  msg.style.display = 'none';
+  spawn();
+}
+
+function spawn() {
+  const size = 40 + Math.random() * 40;
+  const c = document.createElement('div');
+  c.className = 'circle';
+  c.style.width = c.style.height = size + 'px';
+  c.style.left = Math.random() * (area.clientWidth - size) + 'px';
+  c.style.top = Math.random() * (area.clientHeight - size) + 'px';
+  area.appendChild(c);
+
+  c.onpointerdown = () => {
+    clearTimeout(timer);
+    c.remove();
+    score++;
+    scoreEl.textContent = score;
+    if (score > best) {
+      best = score;
+      localStorage.setItem('sirkel-rekord', best);
+      bestEl.textContent = best;
+    }
+    lifetime = Math.max(400, lifetime - 30);
+    spawn();
+  };
+
+  timer = setTimeout(() => {
+    c.remove();
+    lives--;
+    livesEl.textContent = lives;
+    if (lives <= 0) return gameOver();
+    spawn();
+  }, lifetime);
+}
+
+function gameOver() {
+  msgText.textContent = `Game over! Poeng: ${score} – Rekord: ${best}`;
+  msg.style.display = 'flex';
+  document.getElementById('start').textContent = 'Spill igjen';
+}
+</script>
+</body>
+</html>

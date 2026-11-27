@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slå muldvarpen</title>
+<style>
+  body { margin: 0; font-family: system-ui, sans-serif; background: #2d5a27; color: #fff; text-align: center; user-select: none; }
+  header { padding: 12px; font-size: 1.3rem; }
+  header span { margin: 0 14px; }
+  #board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; width: min(92vw, 480px); margin: 10px auto; }
+  .hole { position: relative; aspect-ratio: 1; background: #3b2a1a; border-radius: 50%; overflow: hidden; box-shadow: inset 0 -10px 0 #1f160d; cursor: pointer; }
+  .mole { position: absolute; left: 15%; width: 70%; height: 70%; bottom: -75%; background: #8b5a2b; border-radius: 50% 50% 20% 20%; transition: bottom .12s; font-size: 0; }
+  .mole::before { content: ""; position: absolute; left: 30%; top: 30%; width: 12%; height: 12%; background: #000; border-radius: 50%; box-shadow: 40px 0 0 #000; }
+  .mole::after { content: ""; position: absolute; left: 38%; top: 55%; width: 24%; height: 16%; background: #f4a6a6; border-radius: 50%; }
+  .hole.up .mole { bottom: 0; }
+  .hole.hit .mole { background: #c0392b; }
+  #msg { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,.7); font-size: 1.4rem; }
+  button { font-size: 1.2rem; padding: 10px 24px; border: 0; border-radius: 8px; background: #f7c948; cursor: pointer; margin-top: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <span>Poeng: <b id="score">0</b></span>
+  <span>Tid: <b id="time">30</b></span>
+  <span>Rekord: <b id="best">0</b></span>
+</header>
+<div id="board"></div>
+<div id="msg"><div id="msgText">Slå muldvarpene før de forsvinner! Du har 30 sekunder.</div><button id="start">Start</button></div>
+<script>
+const DURATION = 30;
+const board = document.getElementById('board');
+const msg = document.getElementById('msg');
+const msgText = document.getElementById('msgText');
+const startBtn = document.getElementById('start');
+const scoreEl = document.getElementById('score');
+const timeEl = document.getElementById('time');
+const bestEl = document.getElementById('best');
+
+let best = parseInt(localStorage.getItem('muldvarp-rekord') || '0', 10);
+bestEl.textContent = best;
+
+const holes = [];
+for (let i = 0; i < 9; i++) {
+  const h = document.createElement('div');
+  h.className = 'hole';
+  h.innerHTML = '<div class="mole"></div>';
+  h.onpointerdown = () => whack(h);
+  board.appendChild(h);
+  holes.push(h);
+}
+
+let score, timeLeft, running, countdown, popTimer, hideTimer, current;
+
+startBtn.onclick = start;
+
+function start() {
+  score = 0; timeLeft = DURATION; running = true; current = null;
+  scoreEl.textContent = score; timeEl.textContent = timeLeft;
+  msg.style.display = 'none';
+  countdown = setInterval(() => {
+    timeLeft--;
+    timeEl.textContent = timeLeft;
+    if (timeLeft <= 0) end();
+  }, 1000);
+  pop();
+}
+
+function pop() {
+  if (!running) return;
+  let h;
+  do { h = holes[Math.floor(Math.random() * holes.length)]; } while (h === current);
+  current = h;
+  h.classList.remove('hit');
+  h.classList.add('up');
+  const stay = 500 + Math.random() * 600;
+  hideTimer = setTimeout(() => { hide(h); next(); }, stay);
+}
+
+function hide(h) {
+  h.classList.remove('up');
+  if (current === h) current = null;
+}
+
+function next() {
+  popTimer = setTimeout(pop, 150 + Math.random() * 350);
+}
+
+function whack(h) {
+  if (!running || !h.classList.contains('up') || h.classList.contains('hit')) return;
+  h.classList.add('hit');
+  score++;
+  scoreEl.textContent = score;
+  clearTimeout(hideTimer);
+  setTimeout(() => hide(h), 150);
+  next();
+}
+
+function end() {
+  running = false;
+  clearInterval(countdown);
+  clearTimeout(popTimer);
+  clearTimeout(hideTimer);
+  holes.forEach(h => h.classList.remove('up', 'hit'));
+  let text = `Tiden er ute! Poeng: ${score}`;
+  if (score > best) {
+    best = score;
+    localStorage.setItem('muldvarp-rekord', best);
+    bestEl.textContent = best;
+    text += ' – Ny rekord! 🎉';
+  } else {
+    text += ` – Rekord: ${best}`;
+  }
+  msgText.textContent = text;
+  startBtn.textContent = 'Spill igjen';
+  msg.style.display = 'flex';
+}
+</script>
+</body>
+</html>
